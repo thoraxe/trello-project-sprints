@@ -1,43 +1,27 @@
 require 'rubygems'
 require 'sinatra'
+require 'trello'
+require 'haml'
 
 configure do
-  enable :sessions
-end
+  # constants
+  TRELLO_DEVELOPER_PUBLIC_KEY=ENV['TRELLO_DEVELOPER_PUBLIC_KEY']
+  TRELLO_MEMBER_TOKEN=ENV['TRELLO_MEMBER_TOKEN']
+  TRELLO_BOARD_ID=ENV['TRELLO_BOARD_ID']
+  TRELLO_PROJECT_ID=ENV['TRELLO_PROJECT_ID']
 
-helpers do
-  def username
-    session[:identity] ? session[:identity] : 'Hello stranger'
+  Trello.configure do |config|
+    config.developer_public_key = TRELLO_DEVELOPER_PUBLIC_KEY # The "key" from step 1
+    config.member_token = TRELLO_MEMBER_TOKEN # The token from step 3.
   end
-end
 
-before '/secure/*' do
-  unless session[:identity]
-    session[:previous_url] = request.path
-    @error = 'Sorry, you need to be logged in to visit ' + request.path
-    halt erb(:login_form)
-  end
 end
 
 get '/' do
-  erb 'Can you handle a <a href="/secure/place">secret</a>?'
+  pmm_board = Trello::Board.find(TRELLO_BOARD_ID)
+
+  sprint_lists = (pmm_board.lists(:filter => :all)).select { |list| list.name.downcase.include? "sprint" }
+
+  haml :index, :format => :html5, :locals => {:sprint_lists => sprint_lists}, :layout_engine => :erb
 end
 
-get '/login/form' do
-  erb :login_form
-end
-
-post '/login/attempt' do
-  session[:identity] = params['username']
-  where_user_came_from = session[:previous_url] || '/'
-  redirect to where_user_came_from
-end
-
-get '/logout' do
-  session.delete(:identity)
-  erb "<div class='alert alert-message'>Logged out</div>"
-end
-
-get '/secure/place' do
-  erb 'This is a secret place that only <%=session[:identity]%> has access to!'
-end
