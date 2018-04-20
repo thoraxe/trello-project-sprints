@@ -6,7 +6,7 @@
         %th Project
         %th Link
       - sprint.cards.each do |card|
-        - if card.card_labels.any? { |label| label["id"] == TRELLO_PROJECT_ID }
+        - if card.card_labels.include?(TRELLO_PROJECT_ID)
           %tr
             %td= card.name
             %td
